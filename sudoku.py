@@ -70,13 +70,52 @@ class SudokuGroup(object):
 
     def __init__(self, cells, group_kind, id_num):
         assert len(cells) == 9
-        self.cells = zip(range(1, 10), cells)  # [(1, sq1), (2, sq2), ...]
+        self.cells = zip(range(1, 10), cells)  # [(1, c1), (2, c2), ...]
         self.settled_combinations = set([])
         self.spotted_vals = set([])
         self.places = set(xrange(1, 10))
         self.meaningful_subgroups = MEANINGFUL_SUBGROUPS[group_kind]
         self.group_kind = group_kind
         self.id_num = id_num
+
+    def every_cell_has_val(self):
+        return all([len(cell.possible_vals)
+                    for cell in map(itemgetter(1), self.cells)])
+
+    def every_val_has_cell(self):
+        return all([self.val_has_cell(val) for val in self.places])
+
+    def val_has_cell(self, val):
+        for i, cell in self.cells:
+            if val in cell.possible_vals:
+                return True
+        else:
+            return False
+
+    def same_value_set(self, val):
+        value_set = False
+        for i, cell in self.cells:
+            if val in cell.possible_vals and len(cell.possible_vals) == 1:
+                if value_set:
+                    return True
+                else:
+                    value_set = True
+        else:
+            return False
+
+    def duplicate_values_set(self):
+        for val in self.places:
+            if self.same_value_set(val):
+                return True
+        else:
+            return False
+
+    def check_group_validity(self):
+        if self.every_cell_has_val() and self.every_val_has_cell() and \
+                not self.duplicate_values_set():
+            return True
+        else:
+            return False
 
     def settle_combination(self, nuple, fitted_cells, settle_type,
                            explain=True):
@@ -152,8 +191,11 @@ class SudokuGroup(object):
                        for settled_comb in self.settled_combinations)
 
     def is_solved(self):
-        return all([len(cell.possible_vals) == 1
-                    for cell in map(itemgetter(1), self.cells)])
+        if self.check_group_validity():
+            return all([len(cell.possible_vals) == 1
+                        for cell in map(itemgetter(1), self.cells)])
+        else:
+            return False
 
 
 class SudokuTable(object):
@@ -189,6 +231,13 @@ class SudokuTable(object):
             self.sq3.append(group_sq3)
         self.groups = self.rows + self.columns + self.sq3
 
+    def check_table_validity(self):
+        for group in self.groups:
+            if not group.check_group_validity():
+                return False
+        else:
+            return True
+
     def to_string(self):
         ans = []
         for row_num, row in enumerate(self.table):
@@ -221,8 +270,14 @@ class SudokuTable(object):
         if explain:
             print('INITIAL PROBLEM')
             print(self.to_string())
+
         while old_outer != new and not self.solved:
-            while old != new and not self.solved:
+            valid = self.check_table_validity()
+            while old != new and not self.solved and valid:
+                valid = self.check_table_validity()
+                if not valid:
+                    print('This Sudoku is not solvable')
+                    break
                 i += 1
                 old = new
                 self.solve_single_pass_no_relating(explain)
@@ -238,9 +293,12 @@ class SudokuTable(object):
                 self.relate_groups()
                 new = self.to_string()
                 if all([row.is_solved() for row in self.rows]):
+                    self.solved = True
                     break
                 elif explain:
                     print new
+        if not self.solved and valid:
+            print('Couldn\'t solve this Sudoku :(')
         if not explain:
             print(self.to_string())
 
@@ -357,6 +415,39 @@ if __name__ == '__main__':
         [None, 2, None, 6, None, 8, None, 9, None],
         [None, None, 1, None, None, None, 4, None, None],
     ]
-
-    S = get_sudoku_table(extreme3)
+    weird = [
+        [None, None, None, None, None, 6, None, None, None],
+        [None, 5, 9, None, None, None, None, None, 8],
+        [2, None, None, None, None, 8, None, None, None],
+        [None, 4, 5, None, None, None, None, None, None],
+        [None, None, 3, None, None, None, None, None, None],
+        [None, None, 6, None, None, 3, None, 5, 4],
+        [None, None, None, 3, 2, 5, None, None, 6],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+    ]  # from http://norvig.com/sudoku.html
+    no_sol = [
+        [None, None, None, None, None, 5, None, 8, None],
+        [None, None, None, 6, None, 1, None, 4, 3],
+        [None, None, None, None, None, None, None, None, None],
+        [None, 1, None, 5, None, None, None, None, None],
+        [None, None, None, 1, None, 6, None, None, None],
+        [3, None, None, None, None, None, None, None, 5],
+        [5, 3, None, None, None, None, None, 6, 1],
+        [None, None, None, None, None, None, None, None, None],
+        [None, None, None, None, None, None, None, None, None],
+    ]
+    taylan = [
+        [None, 4, None, None, None, None, None, 6, 9],
+        [6, 3, None, 7, None, 9, 2, None, 5],
+        [None, 9, 2, None, None, None, 8, None, None],
+        [4, 5, 7, 2, 6, 8, 9, None, None],
+        [9, None, None, 3, 7, 1, 5, 2, 4],
+        [2, 1, 3, 4, 9, 5, 6, None, None],
+        [None, 7, 9, None, None, None, 1, None, None],
+        [3, None, None, 1, None, 7, 4, 9, 2],
+        [1, 2, 4, 9, None, None, None, 5, None],
+    ]
+    # S = get_sudoku_table(extreme3)
+    S = get_sudoku_table(taylan)
     S.solve()
