@@ -277,6 +277,7 @@ class SudokuTable(object):
                 valid = self.check_table_validity()
                 if not valid:
                     print('This Sudoku is not solvable')
+                    return False
                     break
                 i += 1
                 old = new
@@ -288,6 +289,7 @@ class SudokuTable(object):
                     self.solved = True
                     print('SOLVED!')
                     break
+                    return True
             else:
                 old_outer = new
                 self.relate_groups()
@@ -298,7 +300,9 @@ class SudokuTable(object):
                 elif explain:
                     print new
         if not self.solved and valid:
-            print('Couldn\'t solve this Sudoku :(')
+            print('Couldn\'t solve this Sudoku :( Switching to trial/error')
+            # XXX: implement trial error
+            return
         if not explain:
             print(self.to_string())
 
@@ -337,6 +341,11 @@ class SudokuTable(object):
         for i, cell in related_group.cells:
             if cell not in donottouch:
                 cell.eliminate_possibilities(val)
+        args = (val, group.group_kind, group.id_num + 1,
+                related_group.group_kind, related_group.id_num + 1)
+        print(('The value %s in %s #%s has to be placed in cells that'
+               ' are in order, so the other cells in %s #%s cannot '
+               'contain them. Eliminating those possibilities.' % args))
 
     def relate_groups(self):
         for i, group in enumerate(self.groups):
@@ -359,6 +368,14 @@ class SudokuTable(object):
             for n in xrange(1, 4):
                 group.fit(n, explain)
                 group.spot(n, explain)
+
+
+# class SudokuSolver(object):
+
+#     def __init__(self, table):
+#         self.SudokuTable = SudokuTable(table)
+
+#     def solve(self):
 
 
 def get_sudoku_table(table):
@@ -415,6 +432,29 @@ if __name__ == '__main__':
         [None, 2, None, 6, None, 8, None, 9, None],
         [None, None, 1, None, None, None, 4, None, None],
     ]
+    extreme4 = [
+        [6, 9, 8, 7, 2, 3, 1, 5, 4],
+        [2, 3, 7, 4, 5, 1, 9, 8, 6],
+        [1, 4, 5, 8, 6, 9, None, 2, None],
+        [None, 5, None, 6, None, None, None, 9, None],
+        [None, None, None, 3, None, 2, None, None, None],
+        [None, 8, None, 5, None, 4, None, 7, None],
+        [8, None, 9, 2, 4, 6, None, 3, None],
+        [5, None, None, 9, 3, None, None, None, 2],
+        [4, 2, 3, 1, None, 5, None, 6, 9],
+    ]
+    # XXX: Our current tools are not sufficient to solve the following
+    extreme5 = [
+        [9, 8, None, 3, 7, 5, 1, None, 2],
+        [2, 7, None, None, None, 8, 5, 3, None],
+        [3, 5, None, None, None, 2, 8, None, 7],
+        [5, 6, 3, 2, 9, None, 7, None, 8],
+        [7, None, 8, 5, 6, 3, 9, 2, None],
+        [None, 2, 9, 7, 8, None, 3, 5, 6],
+        [8, None, 2, 4, 5, 7, 6, None, 3],
+        [None, None, 5, 8, 3, 6, 2, 7, None],
+        [6, 3, 7, 1, 2, 9, 4, 8, 5]
+    ]
     weird = [
         [None, None, None, None, None, 6, None, None, None],
         [None, 5, 9, None, None, None, None, None, 8],
@@ -448,6 +488,7 @@ if __name__ == '__main__':
         [3, None, None, 1, None, 7, 4, 9, 2],
         [1, 2, 4, 9, None, None, None, 5, None],
     ]
+    S = get_sudoku_table(extreme5)
     # S = get_sudoku_table(extreme3)
-    S = get_sudoku_table(taylan)
+    # S = get_sudoku_table(taylan)
     S.solve()
